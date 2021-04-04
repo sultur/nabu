@@ -1,24 +1,20 @@
 #ifndef NABU_TYPES
 #define NABU_TYPES
 
+#include "config.h"
+
 class Note
 {
 public:
-    std::string title;
     std::string filename;
+    std::string description;
+    NoteType type;
 
-    Note();
-    void set_title(std::string new_title);
-    void set_filename(std::string new_filename);
-    std::string to_json();
+    Note(std::string, std::string, NoteType, std::vector<std::string>, std::vector<std::string>);
+    nlohmann::json get_metadata();
 
     std::vector<std::string> tags;
-    std::vector<std::string> categories;
+    std::string category;
 };
-
-
-
-
-
 
 #endif

@@ -1,12 +1,11 @@
-#include <iostream>
+#include "cli.h"
 
-#include "config.h"
+using json = nlohmann::json;
 using namespace std;
 
-int cli(vector<string> args)
+int cli(vector<string> args, json metadata)
 {
     string action = args[0];
-    cout << action << endl;
     if (action.compare("new") == 0)
     {
         cout << "create new memo" << endl;
