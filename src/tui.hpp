@@ -1,7 +1,7 @@
 #ifndef NABU_TUI_HEADER
 #define NABU_TUI_HEADER
 
-#include "config.h"
+#include "../config.hpp"
 
 int tui(nlohmann::json metadata);
 

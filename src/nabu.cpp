@@ -1,8 +1,8 @@
-#include "config.h"
-#include "nabu_types.h"
+#include "../config.hpp"
 
-#include "tui.h"
-#include "cli.h"
+#include "nabu_types.hpp"
+#include "tui.hpp"
+#include "cli.hpp"
 
 #define METADATAFILE ".metadata.json"
 
@@ -95,18 +95,15 @@ json load_data()
     bfs::path metafile(NABU_ROOT_PATH.c_str());
     metafile /= METADATAFILE;
 
-    cout << "Loading metadata from " << metafile.native() << " ..." << endl;
-
     json metadata;
     ifstream inputfile(metafile.c_str());
 
     // Check if file is empty
     if (!bfs::is_empty(metafile))
     {
+        // Read and parse metadata from JSON
         inputfile >> metadata;
     }
-
-    cout << "Finished reading metadata ..." << endl;
 
     return metadata;
 }
