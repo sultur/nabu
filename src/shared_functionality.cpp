@@ -71,9 +71,9 @@ pair<vector<string>, bfs::path> extract_tags_and_category(vector<string> args)
     bool is_tag = false, is_category = false;
     for (string s : args)
     {
-        if (s.compare("..") == 0)
+        if (s.compare("..") == 0 || s.compare(".") == 0)
         {
-            // Ignore '..' as category
+            // Ignore '..' and '.' as categories
             continue;
         }
         else if (s.compare("-c") == 0)
@@ -115,7 +115,12 @@ json create_note(vector<string> args, string root, string editor)
     filepath /= category.native();
     filepath /= filename;
 
-    if (bfs::exists(filepath))
+    // Create category folders if they don't exist
+    if (!bfs::exists(filepath.parent_path()))
+    {
+        bfs::create_directories(filepath.parent_path());
+    }
+    else if (bfs::exists(filepath))
     {
         cout << "File already exists! Do you want to overwrite it? (y/N) ";
         string ans;
@@ -124,12 +129,7 @@ json create_note(vector<string> args, string root, string editor)
         {
             exit(0);
         }
-    }
-
-    // Create category folders if they don't exist
-    if (!bfs::exists(filepath.parent_path()))
-    {
-        bfs::create_directories(filepath.parent_path());
+        ofstream outputfile(filepath.c_str(), ios::trunc);
     }
 
     // Construct editor command
@@ -150,30 +150,130 @@ json create_note(vector<string> args, string root, string editor)
 
 void list_notes(json metadata, std::vector<std::string> args)
 {
-    // TODO interpret arguments (-and/-or)
-
+    if (args.size() > 0)
+    {
+        // TODO interpret arguments (-and/-or)
+    }
     print_note_metadata(metadata);
 }
 
-void list_categories()
+void list_categories(string root)
 {
-    //TODO
+    bfs::path nabu_root(root);
+    for (auto dir = bfs::recursive_directory_iterator(nabu_root);
+         dir != bfs::recursive_directory_iterator();
+         ++dir)
+    {
+        if (bfs::is_directory(dir->path()))
+        {
+            // TODO maybe make output more visually appealing
+            cout << string(dir.depth(), '.')
+                 << string(dir.depth(), ' ')
+                 << dir->path().filename().string()
+                 << bfs::path::preferred_separator
+                 << '\n';
+        }
+    }
 }
 
-void list_tags(json metadata)
+void list_tags(json notes)
 {
+    // Gather all tags into set
     set<string> tagset;
-    //TODO
+    for (auto &note : notes)
+    {
+        vector<string> tags = note["tags"].get<vector<string>>();
+        tagset.insert(tags.begin(), tags.end());
+    }
 
+    // Print tags surrounded by braces and separated by commas
+    string output = "[";
+    for (string tag : tagset)
+    {
+        output += tag + ", ";
+    }
+
+    cout << "Tags:\n"
+         << output.substr(0, output.rfind(',')) << "]" << endl;
 }
 
-json edit_note(json note_data, std::vector<std::string> args)
+json edit_note(json note_data, std::vector<std::string> args, string root, string editor)
 {
-    //TODO
+    // Check if user provided either '-t' or '-c' as an argument
+    bool change_tags = false, change_category = false;
+    for (string s : args)
+    {
+        if (s.compare("-t") == 0)
+        {
+            change_tags = true;
+        }
+        else if (s.compare("-c") == 0)
+        {
+            change_category = true;
+        }
+    }
+
+    pair<vector<string>, bfs::path> tag_category_pair = extract_tags_and_category(args);
+    vector<string> new_tags = tag_category_pair.first;
+    bfs::path new_category = tag_category_pair.second;
+
+    bfs::path filepath(root);
+    filepath /= note_data["category"].get<string>();
+    filepath /= note_data["file"].get<string>();
+
+    if (bfs::exists(filepath))
+    {
+        // Change category
+        if (change_category)
+        {
+            bfs::path new_path(root);
+            new_path /= new_category;
+
+            // Create new category if it doesn't already exist
+            bfs::create_directories(new_path);
+
+            new_path /= note_data["file"].get<string>();
+
+            // If file with same name already exists in new location
+            if (bfs::exists(new_path))
+            {
+                cout << "File with same name already exists in specified category! Do you want to overwrite it? (y/N) ";
+                string ans;
+                getline(cin, ans);
+                if (!ans.compare("y") == 0 && !ans.compare("Y") == 0)
+                {
+                    exit(0);
+                }
+            }
+
+            // Move file to new category
+            bfs::copy_file(filepath, new_path, bfs::copy_options::overwrite_existing);
+            bfs::remove_all(filepath);
+            cout << "Note moved from " << note_data["category"].get<string>() << " to " << new_category.string() << ".\n";
+            filepath = new_path;
+        }
+
+        // Edit note content
+        string command = editor + " " + filepath.string();
+        system(command.c_str());
+
+        // Apply new tags
+        if (change_tags)
+        {
+            note_data["tags"] = new_tags;
+            cout << "New tags applied\n";
+        }
+    }
+    else
+    {
+        cout << "Note wasn't found." << endl;
+        exit(1);
+    }
+
     return note_data;
 }
 
-void delete_note(json note_data)
+void delete_note(json note_data, string root)
 {
     //TODO
 }
