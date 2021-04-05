@@ -44,9 +44,11 @@ Nabu commands:
     ```
     Arguments:
     -   `-t`: Change note tags to given tags.
-    -   `-d`: Change note category to given category.
+    -   `-c`: Change note category to given category.
 -   `delete` (`d`): Delete certain note.
     Format:
     ```sh
     nabu d <note id>
     ```
+-   `list-categories` (`lc`): List categories
+-   `list-tags` (`lt`): List all tags

@@ -6,12 +6,14 @@
 /* Config variables */
 // note: for getenv() to work, the environment variable must be set
 
-static const bfs::path NABU_ROOT_PATH(strcat(getenv("HOME"), "/nabu/")); // Root folder for note library
+// Provide absolute path for each variable
+static const std::string home_folder = getenv("HOME"); // Expand '~'
+static const std::string NABU_ROOT_PATH = home_folder + "/nabu"; // Root folder for note library
 
-static const std::vector<std::string> NOTE_EDITOR = {getenv("EDITOR")}; // Program to write notes/memos. Will be called with file name as argument
+static const std::string NOTE_EDITOR = getenv("EDITOR"); // Program to write notes/memos. Will be called with file name as argument
 
-static const std::vector<std::string> NOTE_READER = {"cat"};       // Program to read notes
-static const std::vector<std::string> PDF_VIEWER = {"zathura"};    // Program to open PDF files
-static const std::vector<std::string> IMG_VIEWER = {"sxiv", "-a"}; // Program to open images
+static const std::string NOTE_READER = "/bin/cat";    // Program to read notes
+static const std::string PDF_VIEWER = "/usr/bin/zathura"; // Program to open PDF files
+static const std::string IMG_VIEWER = "/usr/bin/sxiv -a"; // Program to open images
 
 #endif

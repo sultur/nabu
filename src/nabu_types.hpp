@@ -6,13 +6,12 @@
 class Note
 {
 public:
-    int id;
     std::string filename;
     std::string path;
-    std::string description;
     NoteType type;
 
-    Note(int, std::string, std::string, std::string, NoteType, std::vector<std::string>);
+    Note(std::string, std::string, NoteType, std::vector<std::string>);
+    Note(nlohmann::json);
     nlohmann::json get_metadata();
 
     std::vector<std::string> tags;

@@ -3,6 +3,6 @@
 
 #include "../config.hpp"
 
-int tui(nlohmann::json metadata);
+nlohmann::json tui(nlohmann::json metadata);
 
 #endif // NABU_TUI_HEADER

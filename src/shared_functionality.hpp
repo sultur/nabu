@@ -5,6 +5,7 @@
 #include <magic.h> // For deducing file types
 #include <iostream>
 #include <vector>
+#include <set>
 #include <string>
 #include <fstream>
 #include <boost/filesystem.hpp>
@@ -28,12 +29,14 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
      {PDF, "pdf"}})
 
 void print_note_metadata(nlohmann::json notes);
+std::pair<std::vector<std::string>, bfs::path> extract_tags_and_category(std::vector<std::string>);
+nlohmann::json create_note(std::vector<std::string>, std::string, std::string);
+void list_notes(nlohmann::json, std::vector<std::string>);
+void list_categories();
+void list_tags(json);
+nlohmann::json edit_note(nlohmann::json, std::vector<std::string>);
+void delete_note(nlohmann::json);
 
-void create_note(int, std::string, std::string, NoteType, std::vector<std::string>, std::vector<std::string>);
-void list_notes(std::vector<std::string>);
-void edit_note();
-void delete_note();
-
-std::string get_filetype(std::string);
+NoteType get_notetype(std::string);
 
 #endif // NABU_SHARED_FUNCS

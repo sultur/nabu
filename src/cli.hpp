@@ -3,6 +3,6 @@
 
 #include "../config.hpp"
 
-int cli(std::vector<std::string> args, nlohmann::json metadata);
+std::pair<bool, nlohmann::json> cli(std::vector<std::string>, nlohmann::json, std::string);
 
 #endif // NABU_CLI_HEADER
