@@ -456,8 +456,8 @@ json edit_note(json note_data, std::vector<std::string> args, string root, strin
             // Move file to new category
             bfs::copy_file(filepath, new_path, bfs::copy_options::overwrite_existing);
             bfs::remove_all(filepath);
-            note_data["category"] = new_category.string();
             cout << "Note moved from " << note_data["category"].get<string>() << " to " << new_category.string() << ".\n";
+            note_data["category"] = new_category.string();
             filepath = new_path;
         }
 
@@ -478,6 +478,8 @@ json edit_note(json note_data, std::vector<std::string> args, string root, strin
         exit(1);
     }
 
+    // Remove empty directories
+    clean_directory_structure(root);
     return note_data;
 }
 
@@ -487,4 +489,34 @@ void delete_note(json note_data, string root)
     filepath /= note_data["category"].get<string>();
     filepath /= note_data["file"].get<string>();
     bfs::remove_all(filepath);
+
+    // Remove empty directories
+    clean_directory_structure(root);
+}
+
+/* Remove all empty directories below root path.
+ */
+void clean_directory_structure(string root)
+{
+    bfs::path nabu_root(root);
+    bool found_empty;
+    vector<bfs::path> to_remove;
+    do
+    {
+        found_empty = false;
+        for (auto dir = bfs::recursive_directory_iterator(nabu_root);
+             dir != bfs::recursive_directory_iterator();
+             ++dir)
+        {
+            if (bfs::is_empty(dir->path()))
+            {
+                found_empty = true;
+                to_remove.push_back(dir->path());
+            }
+        }
+        for (bfs::path p : to_remove) {
+            bfs::remove_all(p);
+        }
+        to_remove.clear();
+    } while (found_empty);
 }

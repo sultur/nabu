@@ -45,4 +45,5 @@ void list_tags(nlohmann::json);
 nlohmann::json edit_note(nlohmann::json, std::vector<std::string>, std::string, std::string);
 void delete_note(nlohmann::json, std::string);
 
+void clean_directory_structure(std::string);
 #endif // NABU_SHARED_FUNCS
