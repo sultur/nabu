@@ -10,11 +10,12 @@ public:
     std::string path;
     NoteType type;
 
-    Note(std::string, std::string, NoteType, std::vector<std::string>);
+    Note(std::string, std::string, NoteType, std::set<std::string>);
     Note(nlohmann::json);
     nlohmann::json get_metadata();
+    bool fits_specification(std::vector<std::pair<std::set<std::string>, bfs::path>>);
 
-    std::vector<std::string> tags;
+    std::set<std::string> tags;
 };
 
 #endif

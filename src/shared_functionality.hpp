@@ -35,7 +35,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
 
 void print_note_metadata(nlohmann::json notes, std::string);
 NoteType get_notetype(std::string);
-std::pair<std::vector<std::string>, bfs::path> extract_tags_and_category(std::vector<std::string>);
+std::pair<std::set<std::string>, bfs::path> extract_tags_and_category(std::vector<std::string>);
+nlohmann::json interpret_list_specification(nlohmann::json, std::vector<std::string> args);
 
 nlohmann::json create_note(std::vector<std::string>, std::string, std::string);
 void list_notes(nlohmann::json, std::vector<std::string>, std::string);

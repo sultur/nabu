@@ -8,10 +8,17 @@ void print_note_metadata(json notes, string root = "")
 {
     if (notes.is_array())
     {
+        if (notes.size() == 0)
+        {
+            cout << "No notes match specification." << endl;
+            return;
+        }
         // Output columns:
         // ID, File, Type, Category, Tags, Abs. path
         vector<vector<string>> output_table = {{"ID", "File", "Type", "Category", "Tags", "Abs. path"}};
         vector<int> longest_strings = {2, 4, 4, 8, 4, 9};
+
+        // Construct table
         for (int i = 0; i < notes.size(); i++)
         {
             string id = to_string(i + 1);
@@ -58,6 +65,8 @@ void print_note_metadata(json notes, string root = "")
             // Add row to output table
             output_table.push_back(row);
         }
+
+        // Print table
         for (int i = 0; i < output_table.size(); i++)
         {
             if (i == 0)
@@ -70,7 +79,8 @@ void print_note_metadata(json notes, string root = "")
             }
             if (i == 0)
             {
-                cout << REGULAR << "\n" << FAINT;
+                cout << REGULAR << "\n"
+                     << FAINT;
                 for (int l : longest_strings)
                 {
                     cout << string(l + 1, '-');
@@ -79,10 +89,6 @@ void print_note_metadata(json notes, string root = "")
             }
             cout << "\n";
         }
-    }
-    else if (notes.is_object())
-    {
-        // TODO
     }
 }
 
@@ -128,18 +134,19 @@ NoteType get_notetype(string filename)
 
 /* Extract tags and category from an argument vector.
  */
-pair<vector<string>, bfs::path> extract_tags_and_category(vector<string> args)
+pair<set<string>, bfs::path> extract_tags_and_category(vector<string> args)
 {
-    vector<string> tags;
+    set<string> tags;
     bfs::path category;
 
     // Extract tags and category (folder path)
     bool is_tag = false, is_category = false;
     for (string s : args)
     {
-        if (s.compare("..") == 0 || s.compare(".") == 0)
+        if (s.find("..") != string::npos || s.compare(".") == 0)
         {
             // Ignore '..' and '.' as categories
+            cout << "Category cannot contain '..'" << endl;
             continue;
         }
         else if (s.compare("-c") == 0)
@@ -157,15 +164,142 @@ pair<vector<string>, bfs::path> extract_tags_and_category(vector<string> args)
 
         if (is_tag)
         {
-            tags.push_back(s);
+            tags.insert(s);
         }
         if (is_category)
         {
             category /= s;
         }
     }
+    if (category.is_absolute())
+    {
+        category = category.relative_path();
+    }
 
     return make_pair(tags, category);
+}
+
+/* Interpret -and/-or argument chain.
+ */
+json interpret_list_specification(json metadata, vector<string> args)
+{
+    bool is_and = false, is_or = false, is_tag = false, is_category = false;
+    // Counts switches between specifying -t and -c
+    int switches = 0;
+
+    // Vector containing tagset-category pairs
+    // Metadata will then be narrowed down to notes fitting at least one pair's description
+    vector<pair<set<string>, bfs::path>> spec;
+
+    // Construct specification
+    for (string arg : args)
+    {
+        if (arg.compare("-and") == 0)
+        {
+            is_and = true;
+            is_or = false;
+            if (spec.size() == 0)
+            {
+                spec.push_back(make_pair(set<string>(), bfs::path()));
+            }
+        }
+        else if (arg.compare("-or") == 0)
+        {
+            is_or = true;
+            is_and = false;
+
+            // If user specifies e.g. -t tag but no category,
+            // make any category match (and vice versa)
+            // The switches variable is to catch if user specifies "" as category
+            if (switches % 2 == 0 && spec.size() > 0)
+            {
+                if (is_tag && spec.back().second.empty())
+                {
+                    spec.back().second /= "-any";
+                }
+                else if (is_category && spec.back().first.size() == 0)
+                {
+                    spec.back().first.insert("-any");
+                }
+            }
+            // Create new specification tuple
+            spec.push_back(make_pair(set<string>(), bfs::path()));
+        }
+        else if (arg.compare("-t") == 0)
+        {
+            is_tag = true;
+            if (is_category)
+            {
+                switches++;
+                is_category = false;
+            }
+        }
+        else if (arg.compare("-c") == 0)
+        {
+            is_category = true;
+            if (is_tag)
+            {
+                switches++;
+                is_tag = false;
+            }
+        }
+        else
+        {
+            if (is_and || is_or)
+            {
+                // Add to last specification tuple
+                if (is_tag)
+                {
+                    spec.back().first.insert(arg);
+                }
+                else if (is_category)
+                {
+                    spec.back().second /= arg;
+                }
+            }
+            else
+            {
+                if (is_tag)
+                {
+                    if (spec.size() == 0)
+                    {
+                        spec.push_back(make_pair(set<string>(), bfs::path()));
+                    }
+                    spec.back().first.insert(arg);
+                }
+                else if (is_category)
+                {
+                    if (spec.size() == 0)
+                    {
+                        spec.push_back(make_pair(set<string>(), bfs::path()));
+                    }
+                    spec.back().second /= arg;
+                }
+            }
+        }
+    }
+
+    if (is_tag && spec.back().second.empty())
+    {
+        spec.back().second /= "-any";
+    }
+    else if (is_category && spec.back().first.size() == 0)
+    {
+        spec.back().first.insert("-any");
+    }
+
+    // Narrow down specification
+    json new_metadata = json::array();
+    for (int i = 0; i < metadata.size(); i++)
+    {
+        Note note(metadata[i]);
+        if (note.fits_specification(spec))
+        {
+            new_metadata.push_back(metadata[i]);
+        }
+    }
+
+    return new_metadata;
 }
 
 json create_note(vector<string> args, string root, string editor)
@@ -173,8 +307,8 @@ json create_note(vector<string> args, string root, string editor)
     string filename = args[0];
     args.erase(args.begin());
 
-    pair<vector<string>, bfs::path> tag_category_pair = extract_tags_and_category(args);
-    vector<string> tags = tag_category_pair.first;
+    pair<set<string>, bfs::path> tag_category_pair = extract_tags_and_category(args);
+    set<string> tags = tag_category_pair.first;
     bfs::path category = tag_category_pair.second;
 
     bfs::path filepath(root);
@@ -214,11 +348,11 @@ json create_note(vector<string> args, string root, string editor)
     return Note(filepath.filename().string(), category.string(), type, tags).get_metadata();
 }
 
-void list_notes(json metadata, std::vector<std::string> args, string root)
+void list_notes(json metadata, vector<string> args, string root)
 {
     if (args.size() > 0)
     {
-        // TODO interpret arguments (-and/-or)
+        metadata = interpret_list_specification(metadata, args);
     }
     print_note_metadata(metadata, root);
 }
@@ -232,12 +366,13 @@ void list_categories(string root)
     {
         if (bfs::is_directory(dir->path()))
         {
-            // TODO maybe make output more visually appealing
+            // TODO make output more visually appealing
             /*
-            major minor1 sub1
-                  minor2 sub1
-                         sub2 subsub
-                  minor3
+            major1 minor1 sub1
+                   minor2 sub1
+                          sub2 subsub
+                   minor3
+            major2
             */
             cout << string(dir.depth(), '.')
                  << string(dir.depth(), ' ')
@@ -285,8 +420,8 @@ json edit_note(json note_data, std::vector<std::string> args, string root, strin
         }
     }
 
-    pair<vector<string>, bfs::path> tag_category_pair = extract_tags_and_category(args);
-    vector<string> new_tags = tag_category_pair.first;
+    pair<set<string>, bfs::path> tag_category_pair = extract_tags_and_category(args);
+    set<string> new_tags = tag_category_pair.first;
     bfs::path new_category = tag_category_pair.second;
 
     bfs::path filepath(root);
