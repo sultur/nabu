@@ -70,13 +70,13 @@ pair<bool, json> cli(vector<string> args, json metadata, string root)
     }
     else if (action.compare("list") == 0 || action.compare("l") == 0)
     {
-        list_notes(metadata, args);
+        list_notes(metadata, args, root);
     }
     else if (action.compare("edit") == 0 || action.compare("e") == 0)
     {
         int id = get_id(args);
 
-        edit_note(metadata[id - 1], args, root, NOTE_EDITOR);
+        metadata[id - 1] = edit_note(metadata[id - 1], args, root, NOTE_EDITOR);
         rewrite = true;
     }
     else if (action.compare("delete") == 0 || action.compare("d") == 0)

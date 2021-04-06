@@ -1,4 +1,3 @@
-#include <iomanip>
 #include "../config.hpp"
 
 #include "nabu_types.hpp"

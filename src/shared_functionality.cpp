@@ -4,14 +4,80 @@
 using json = nlohmann::json;
 using namespace std;
 
-void print_note_metadata(json notes)
+void print_note_metadata(json notes, string root = "")
 {
     if (notes.is_array())
     {
-        for (auto &note : notes)
+        // Output columns:
+        // ID, File, Type, Category, Tags, Abs. path
+        vector<vector<string>> output_table = {{"ID", "File", "Type", "Category", "Tags", "Abs. path"}};
+        vector<int> longest_strings = {2, 4, 4, 8, 4, 9};
+        for (int i = 0; i < notes.size(); i++)
         {
-            cout << note << '\n';
-            // TODO
+            string id = to_string(i + 1);
+            longest_strings[0] = (id.length() > longest_strings[0]) ? id.length() : longest_strings[0];
+
+            string file = notes[i]["file"].get<string>();
+            longest_strings[1] = (file.length() > longest_strings[1]) ? file.length() : longest_strings[1];
+
+            NoteType type = notes[i]["type"].get<NoteType>();
+            string typestr;
+            switch (type)
+            {
+            case Image:
+                typestr = "Image";
+                break;
+            case PDF:
+                typestr = "PDF";
+                break;
+            case Text:
+                typestr = "Text";
+                break;
+            }
+            longest_strings[2] = (typestr.length() > longest_strings[2]) ? typestr.length() : longest_strings[2];
+
+            string category = notes[i]["category"].get<string>();
+            longest_strings[3] = (category.length() > longest_strings[3]) ? category.length() : longest_strings[3];
+
+            vector<string> tags = notes[i]["tags"].get<vector<string>>();
+            string tagstr = "[";
+            for (string tag : tags)
+            {
+                tagstr += tag + ",";
+            }
+            tagstr = tagstr.substr(0, tagstr.rfind(',')) + "]";
+            longest_strings[4] = (tagstr.length() > longest_strings[4]) ? tagstr.length() : longest_strings[4];
+
+            bfs::path abspath(root);
+            abspath /= category;
+            abspath /= file;
+            string abstr = abspath.string();
+            longest_strings[5] = (abstr.length() > longest_strings[5]) ? abstr.length() : longest_strings[5];
+
+            vector<string> row = {id, file, typestr, category, tagstr, abstr};
+            // Add row to output table
+            output_table.push_back(row);
+        }
+        for (int i = 0; i < output_table.size(); i++)
+        {
+            if (i == 0)
+            {
+                cout << BOLD;
+            }
+            for (int l = 0; l < longest_strings.size(); l++)
+            {
+                cout << setw(longest_strings[l] + 1) << left << output_table[i][l];
+            }
+            if (i == 0)
+            {
+                cout << REGULAR << "\n" << FAINT;
+                for (int l : longest_strings)
+                {
+                    cout << string(l + 1, '-');
+                }
+                cout << REGULAR;
+            }
+            cout << "\n";
         }
     }
     else if (notes.is_object())
@@ -148,13 +214,13 @@ json create_note(vector<string> args, string root, string editor)
     return Note(filepath.filename().string(), category.string(), type, tags).get_metadata();
 }
 
-void list_notes(json metadata, std::vector<std::string> args)
+void list_notes(json metadata, std::vector<std::string> args, string root)
 {
     if (args.size() > 0)
     {
         // TODO interpret arguments (-and/-or)
     }
-    print_note_metadata(metadata);
+    print_note_metadata(metadata, root);
 }
 
 void list_categories(string root)
@@ -167,6 +233,12 @@ void list_categories(string root)
         if (bfs::is_directory(dir->path()))
         {
             // TODO maybe make output more visually appealing
+            /*
+            major minor1 sub1
+                  minor2 sub1
+                         sub2 subsub
+                  minor3
+            */
             cout << string(dir.depth(), '.')
                  << string(dir.depth(), ' ')
                  << dir->path().filename().string()
@@ -249,6 +321,7 @@ json edit_note(json note_data, std::vector<std::string> args, string root, strin
             // Move file to new category
             bfs::copy_file(filepath, new_path, bfs::copy_options::overwrite_existing);
             bfs::remove_all(filepath);
+            note_data["category"] = new_category.string();
             cout << "Note moved from " << note_data["category"].get<string>() << " to " << new_category.string() << ".\n";
             filepath = new_path;
         }
@@ -275,5 +348,8 @@ json edit_note(json note_data, std::vector<std::string> args, string root, strin
 
 void delete_note(json note_data, string root)
 {
-    //TODO
+    bfs::path filepath(root);
+    filepath /= note_data["category"].get<string>();
+    filepath /= note_data["file"].get<string>();
+    bfs::remove_all(filepath);
 }
