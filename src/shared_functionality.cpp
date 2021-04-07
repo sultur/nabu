@@ -302,10 +302,11 @@ json interpret_list_specification(json metadata, vector<string> args)
     return new_metadata;
 }
 
-json create_note(vector<string> args, string root, string editor)
+pair<json, bool> create_note(vector<string> args, string root, string editor)
 {
     string filename = args[0];
     args.erase(args.begin());
+    bool overwritten = false;
 
     pair<set<string>, bfs::path> tag_category_pair = extract_tags_and_category(args);
     set<string> tags = tag_category_pair.first;
@@ -330,6 +331,7 @@ json create_note(vector<string> args, string root, string editor)
             exit(0);
         }
         ofstream outputfile(filepath.c_str(), ios::trunc);
+        overwritten = true;
     }
 
     // Construct editor command
@@ -344,8 +346,11 @@ json create_note(vector<string> args, string root, string editor)
 
     NoteType type = get_notetype(filepath.string());
 
-    // Return metadata for new note
-    return Note(filepath.filename().string(), category.string(), type, tags).get_metadata();
+    // Create new note
+    Note note(filepath.filename().string(), category.string(), type, tags);
+
+    // Return metadata for new note and whether a note was overwritten
+    return make_pair(note.get_metadata(), overwritten);
 }
 
 void list_notes(json metadata, vector<string> args, string root)
@@ -404,10 +409,10 @@ void list_tags(json notes)
          << output.substr(0, output.rfind(',')) << "]" << endl;
 }
 
-json edit_note(json note_data, std::vector<std::string> args, string root, string editor)
+pair<json, bool> edit_note(json note_data, std::vector<std::string> args, string root, string editor)
 {
     // Check if user provided either '-t' or '-c' as an argument
-    bool change_tags = false, change_category = false;
+    bool change_tags = false, change_category = false, overwritten = false;
     for (string s : args)
     {
         if (s.compare("-t") == 0)
@@ -451,6 +456,7 @@ json edit_note(json note_data, std::vector<std::string> args, string root, strin
                 {
                     exit(0);
                 }
+                overwritten = true;
             }
 
             // Move file to new category
@@ -480,7 +486,7 @@ json edit_note(json note_data, std::vector<std::string> args, string root, strin
 
     // Remove empty directories
     clean_directory_structure(root);
-    return note_data;
+    return make_pair(note_data, overwritten);
 }
 
 void delete_note(json note_data, string root)
@@ -514,9 +520,41 @@ void clean_directory_structure(string root)
                 to_remove.push_back(dir->path());
             }
         }
-        for (bfs::path p : to_remove) {
+        for (bfs::path p : to_remove)
+        {
             bfs::remove_all(p);
         }
         to_remove.clear();
     } while (found_empty);
+}
+
+/* Given a note and array of other notes in JSON format, finds note in array with
+ * same path and removes from array, returning new array.
+ */
+json delete_duplicate(json new_note, json metadata)
+{
+    bfs::path note_path;
+    note_path /= new_note["category"].get<string>();
+    note_path /= new_note["file"].get<string>();
+
+    if (metadata.is_array())
+    {
+        for (int i = 0; i < metadata.size();i++)
+        {
+            json obj = metadata[i];
+            if (obj["file"].get<string>().compare(new_note["file"].get<string>()) == 0)
+            {
+                bfs::path other_path;
+                other_path /= obj["category"].get<string>();
+                other_path /= obj["file"].get<string>();
+
+                if (other_path.compare(note_path) == 0)
+                {
+                    metadata.erase(i);
+                    return metadata;
+                }
+            }
+        }
+    }
+    return metadata;
 }

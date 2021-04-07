@@ -36,7 +36,15 @@ pair<bool, json> cli(vector<string> args, json metadata, string root)
             cout << "Please provide filename and optionally any tags or category." << endl;
             exit(1);
         }
-        json new_metadata = create_note(args, root, NOTE_EDITOR);
+        pair<json, bool> return_pair = create_note(args, root, NOTE_EDITOR);
+        json new_metadata = return_pair.first;
+        bool overwritten = return_pair.second;
+
+        // Check if other file overwritten
+        if (overwritten)
+        {
+            metadata = delete_duplicate(new_metadata, metadata);
+        }
 
         metadata.push_back(new_metadata);
         rewrite = true;
@@ -76,7 +84,18 @@ pair<bool, json> cli(vector<string> args, json metadata, string root)
     {
         int id = get_id(args);
 
-        metadata[id - 1] = edit_note(metadata[id - 1], args, root, NOTE_EDITOR);
+        pair<json, bool> return_pair = edit_note(metadata[id - 1], args, root, NOTE_EDITOR);
+        json new_metadata = return_pair.first;
+        bool overwritten = return_pair.second;
+
+        metadata.erase(id - 1);
+        // Check if other file overwritten
+        if (overwritten)
+        {
+            metadata = delete_duplicate(new_metadata, metadata);
+        }
+        metadata.push_back(new_metadata);
+
         rewrite = true;
     }
     else if (action.compare("delete") == 0 || action.compare("d") == 0)

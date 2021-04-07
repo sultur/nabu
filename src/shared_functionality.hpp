@@ -38,12 +38,13 @@ NoteType get_notetype(std::string);
 std::pair<std::set<std::string>, bfs::path> extract_tags_and_category(std::vector<std::string>);
 nlohmann::json interpret_list_specification(nlohmann::json, std::vector<std::string> args);
 
-nlohmann::json create_note(std::vector<std::string>, std::string, std::string);
+std::pair<nlohmann::json, bool> create_note(std::vector<std::string>, std::string, std::string);
 void list_notes(nlohmann::json, std::vector<std::string>, std::string);
 void list_categories(std::string);
 void list_tags(nlohmann::json);
-nlohmann::json edit_note(nlohmann::json, std::vector<std::string>, std::string, std::string);
+std::pair<nlohmann::json, bool> edit_note(nlohmann::json, std::vector<std::string>, std::string, std::string);
 void delete_note(nlohmann::json, std::string);
 
+nlohmann::json delete_duplicate(nlohmann::json, nlohmann::json);
 void clean_directory_structure(std::string);
 #endif // NABU_SHARED_FUNCS
