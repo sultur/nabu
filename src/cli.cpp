@@ -15,7 +15,7 @@ int get_id(vector<string> args)
     {
         id = stoi(args[0]);
     }
-    catch (std::invalid_argument)
+    catch (invalid_argument)
     {
         cout << "Second argument should be id of note." << endl;
         exit(1);
@@ -36,7 +36,19 @@ pair<bool, json> cli(vector<string> args, json metadata, string root)
             cout << "Please provide filename and optionally any tags or category." << endl;
             exit(1);
         }
-        pair<json, bool> return_pair = create_note(args, root, NOTE_EDITOR);
+        string filename = args[0];
+        args.erase(args.begin());
+
+        replace_all(filename, "..", "");
+        replace_all(filename, " ", "_");
+        replace_all(filename, "/", "");
+        replace_all(filename, "\\", "");
+
+        pair<pair<bool, set<string>>, pair<bool, bfs::path>> tag_category_pair = extract_tags_and_category(args);
+        set<string> tags = tag_category_pair.first.second;
+        bfs::path category = tag_category_pair.second.second;
+
+        pair<json, bool> return_pair = create_note(filename, category, tags, root, NOTE_EDITOR);
         json new_metadata = return_pair.first;
         bool overwritten = return_pair.second;
 
@@ -51,7 +63,18 @@ pair<bool, json> cli(vector<string> args, json metadata, string root)
     }
     else if (action.compare("read") == 0 || action.compare("r") == 0)
     {
+        if (metadata.size() == 0)
+        {
+            cout << "No notes found." << endl;
+            exit(0);
+        }
         int id = get_id(args);
+        if (id < 1 || id > metadata.size())
+        {
+            cout << "Argument should be an integer between 1 and " << metadata.size() << "." << endl;
+            exit(1);
+        }
+
         json note = metadata[id - 1];
 
         string command = "";
@@ -82,25 +105,48 @@ pair<bool, json> cli(vector<string> args, json metadata, string root)
     }
     else if (action.compare("edit") == 0 || action.compare("e") == 0)
     {
+        if (metadata.size() == 0)
+        {
+            cout << "No notes found." << endl;
+            exit(0);
+        }
         int id = get_id(args);
+        if (id < 1 || id > metadata.size())
+        {
+            cout << "Argument should be an integer between 1 and " << metadata.size() << "." << endl;
+            exit(1);
+        }
+        pair<pair<bool, set<string>>, pair<bool, bfs::path>> tag_category_pair = extract_tags_and_category(args);
+        pair<bool, set<string>> tag_pair = tag_category_pair.first;
+        pair<bool, bfs::path> category_pair = tag_category_pair.second;
 
-        pair<json, bool> return_pair = edit_note(metadata[id - 1], args, root, NOTE_EDITOR);
+        pair<json, bool> return_pair = edit_note(metadata[id - 1], tag_pair, category_pair, root, NOTE_EDITOR);
         json new_metadata = return_pair.first;
         bool overwritten = return_pair.second;
 
-        metadata.erase(id - 1);
-        // Check if other file overwritten
+        metadata[id - 1] = new_metadata;
+
+        // Check if another file was overwritten
         if (overwritten)
         {
-            metadata = delete_duplicate(new_metadata, metadata);
+            metadata = delete_duplicate(new_metadata, metadata, id-1);
         }
-        metadata.push_back(new_metadata);
 
         rewrite = true;
     }
     else if (action.compare("delete") == 0 || action.compare("d") == 0)
     {
+        if (metadata.size() == 0)
+        {
+            cout << "No notes found." << endl;
+            exit(0);
+        }
         int id = get_id(args);
+        if (id < 1 || id > metadata.size())
+        {
+            cout << "Argument should be an integer between 1 and " << metadata.size() << "." << endl;
+            exit(1);
+        }
         json note = metadata[id - 1];
         metadata.erase(id - 1);
 

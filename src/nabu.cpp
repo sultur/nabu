@@ -24,7 +24,7 @@ int main(int argc, char const *argv[])
     if (argc == 1)
     {
         // TUI MODE
-        metadata = tui(metadata);
+        metadata = tui(metadata, metafile.string());
     }
     else
     {
@@ -42,8 +42,8 @@ int main(int argc, char const *argv[])
     // Rewrite metadata file if appropriate
     if (rewrite)
     {
-        ofstream meta_output(metafile.c_str(), ios::out | ios::trunc);
-        meta_output << setw(4) << metadata << std::endl;
+        ofstream meta_output(metafile.string(), ios::out | ios::trunc);
+        meta_output << setw(4) << metadata << endl;
     }
     return 0;
 }

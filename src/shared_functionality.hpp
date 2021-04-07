@@ -33,18 +33,21 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
      {Image, "img"},
      {PDF, "pdf"}})
 
-void print_note_metadata(nlohmann::json notes, std::string);
+void print_note_metadata(std::vector<std::pair<int, nlohmann::json>>, std::string);
 NoteType get_notetype(std::string);
-std::pair<std::set<std::string>, bfs::path> extract_tags_and_category(std::vector<std::string>);
-nlohmann::json interpret_list_specification(nlohmann::json, std::vector<std::string> args);
+std::pair<std::pair<bool, std::set<std::string>>, std::pair<bool, bfs::path>> extract_tags_and_category(std::vector<std::string>);
+std::vector<std::pair<int, nlohmann::json>> interpret_list_specification(std::vector<std::pair<int, nlohmann::json>>, std::vector<std::string> args);
 
-std::pair<nlohmann::json, bool> create_note(std::vector<std::string>, std::string, std::string);
+std::pair<nlohmann::json, bool> create_note(std::string, bfs::path, std::set<std::string>, std::string, std::string);
 void list_notes(nlohmann::json, std::vector<std::string>, std::string);
 void list_categories(std::string);
 void list_tags(nlohmann::json);
-std::pair<nlohmann::json, bool> edit_note(nlohmann::json, std::vector<std::string>, std::string, std::string);
+std::pair<nlohmann::json, bool> edit_note(nlohmann::json, std::pair<bool, std::set<std::string>>, std::pair<bool, bfs::path>, std::string, std::string);
 void delete_note(nlohmann::json, std::string);
 
-nlohmann::json delete_duplicate(nlohmann::json, nlohmann::json);
+nlohmann::json delete_duplicate(nlohmann::json, nlohmann::json, int=-1);
 void clean_directory_structure(std::string);
+
+void replace_all(std::string &, const std::string &, const std::string &);
+
 #endif // NABU_SHARED_FUNCS

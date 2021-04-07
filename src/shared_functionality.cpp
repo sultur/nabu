@@ -4,91 +4,88 @@
 using json = nlohmann::json;
 using namespace std;
 
-void print_note_metadata(json notes, string root = "")
+void print_note_metadata(vector<pair<int, json>> metadata, string root = "")
 {
-    if (notes.is_array())
+    if (metadata.size() == 0)
     {
-        if (notes.size() == 0)
+        cout << "No notes match specification." << endl;
+        return;
+    }
+    // Output columns:
+    // ID, File, Type, Category, Tags, Abs. path
+    vector<vector<string>> output_table = {{"ID", "File", "Type", "Category", "Tags", "Abs. path"}};
+    vector<int> longest_strings = {2, 4, 4, 8, 4, 9};
+
+    // Construct table
+    for (int i = 0; i < metadata.size(); i++)
+    {
+        string id = to_string(metadata[i].first);
+        longest_strings[0] = (id.length() > longest_strings[0]) ? id.length() : longest_strings[0];
+
+        string file = metadata[i].second["file"].get<string>();
+        longest_strings[1] = (file.length() > longest_strings[1]) ? file.length() : longest_strings[1];
+
+        NoteType type = metadata[i].second["type"].get<NoteType>();
+        string typestr;
+        switch (type)
         {
-            cout << "No notes match specification." << endl;
-            return;
+        case Image:
+            typestr = "Image";
+            break;
+        case PDF:
+            typestr = "PDF";
+            break;
+        case Text:
+            typestr = "Text";
+            break;
         }
-        // Output columns:
-        // ID, File, Type, Category, Tags, Abs. path
-        vector<vector<string>> output_table = {{"ID", "File", "Type", "Category", "Tags", "Abs. path"}};
-        vector<int> longest_strings = {2, 4, 4, 8, 4, 9};
+        longest_strings[2] = (typestr.length() > longest_strings[2]) ? typestr.length() : longest_strings[2];
 
-        // Construct table
-        for (int i = 0; i < notes.size(); i++)
+        string category = metadata[i].second["category"].get<string>();
+        longest_strings[3] = (category.length() > longest_strings[3]) ? category.length() : longest_strings[3];
+
+        vector<string> tags = metadata[i].second["tags"].get<vector<string>>();
+        string tagstr = "[";
+        for (string tag : tags)
         {
-            string id = to_string(i + 1);
-            longest_strings[0] = (id.length() > longest_strings[0]) ? id.length() : longest_strings[0];
-
-            string file = notes[i]["file"].get<string>();
-            longest_strings[1] = (file.length() > longest_strings[1]) ? file.length() : longest_strings[1];
-
-            NoteType type = notes[i]["type"].get<NoteType>();
-            string typestr;
-            switch (type)
-            {
-            case Image:
-                typestr = "Image";
-                break;
-            case PDF:
-                typestr = "PDF";
-                break;
-            case Text:
-                typestr = "Text";
-                break;
-            }
-            longest_strings[2] = (typestr.length() > longest_strings[2]) ? typestr.length() : longest_strings[2];
-
-            string category = notes[i]["category"].get<string>();
-            longest_strings[3] = (category.length() > longest_strings[3]) ? category.length() : longest_strings[3];
-
-            vector<string> tags = notes[i]["tags"].get<vector<string>>();
-            string tagstr = "[";
-            for (string tag : tags)
-            {
-                tagstr += tag + ",";
-            }
-            tagstr = tagstr.substr(0, tagstr.rfind(',')) + "]";
-            longest_strings[4] = (tagstr.length() > longest_strings[4]) ? tagstr.length() : longest_strings[4];
-
-            bfs::path abspath(root);
-            abspath /= category;
-            abspath /= file;
-            string abstr = abspath.string();
-            longest_strings[5] = (abstr.length() > longest_strings[5]) ? abstr.length() : longest_strings[5];
-
-            vector<string> row = {id, file, typestr, category, tagstr, abstr};
-            // Add row to output table
-            output_table.push_back(row);
+            tagstr += tag + ",";
         }
+        tagstr = tagstr.substr(0, tagstr.rfind(',')) + "]";
+        longest_strings[4] = (tagstr.length() > longest_strings[4]) ? tagstr.length() : longest_strings[4];
 
-        // Print table
-        for (int i = 0; i < output_table.size(); i++)
+        bfs::path abspath(root);
+        abspath /= category;
+        abspath /= file;
+        string abstr = abspath.string();
+        longest_strings[5] = (abstr.length() > longest_strings[5]) ? abstr.length() : longest_strings[5];
+
+        vector<string> row = {id, file, typestr, category, tagstr, abstr};
+        // Add row to output table
+        output_table.push_back(row);
+    }
+
+    // Print table
+    for (int i = 0; i < output_table.size(); i++)
+    {
+        if (i == 0)
         {
-            if (i == 0)
-            {
-                cout << BOLD;
-            }
-            for (int l = 0; l < longest_strings.size(); l++)
-            {
-                cout << setw(longest_strings[l] + 1) << left << output_table[i][l];
-            }
-            if (i == 0)
-            {
-                cout << REGULAR << "\n"
-                     << FAINT;
-                for (int l : longest_strings)
-                {
-                    cout << string(l + 1, '-');
-                }
-                cout << REGULAR;
-            }
-            cout << "\n";
+            cout << BOLD;
         }
+        for (int l = 0; l < longest_strings.size(); l++)
+        {
+            cout << setw(longest_strings[l] + 1) << left << output_table[i][l];
+        }
+        if (i == 0)
+        {
+            cout << REGULAR << "\n"
+                 << FAINT;
+            for (int l : longest_strings)
+            {
+                cout << string(l + 1, '-');
+            }
+            cout << REGULAR;
+        }
+        cout << "\n";
     }
 }
 
@@ -134,8 +131,9 @@ NoteType get_notetype(string filename)
 
 /* Extract tags and category from an argument vector.
  */
-pair<set<string>, bfs::path> extract_tags_and_category(vector<string> args)
+pair<pair<bool, set<string>>, pair<bool, bfs::path>> extract_tags_and_category(vector<string> args)
 {
+    bool provided_tags = false, provided_category = false;
     set<string> tags;
     bfs::path category;
 
@@ -153,12 +151,14 @@ pair<set<string>, bfs::path> extract_tags_and_category(vector<string> args)
         {
             is_category = true;
             is_tag = false;
+            provided_category = true;
             continue;
         }
         else if (s.compare("-t") == 0)
         {
             is_tag = true;
             is_category = false;
+            provided_tags = true;
             continue;
         }
 
@@ -176,12 +176,12 @@ pair<set<string>, bfs::path> extract_tags_and_category(vector<string> args)
         category = category.relative_path();
     }
 
-    return make_pair(tags, category);
+    return make_pair(make_pair(provided_tags, tags), make_pair(provided_category, category));
 }
 
 /* Interpret -and/-or argument chain.
  */
-json interpret_list_specification(json metadata, vector<string> args)
+vector<pair<int, json>> interpret_list_specification(vector<pair<int, json>> metadata, vector<string> args)
 {
     bool is_and = false, is_or = false, is_tag = false, is_category = false;
     // Counts switches between specifying -t and -c
@@ -289,10 +289,10 @@ json interpret_list_specification(json metadata, vector<string> args)
     }
 
     // Narrow down specification
-    json new_metadata = json::array();
+    vector<pair<int, json>> new_metadata;
     for (int i = 0; i < metadata.size(); i++)
     {
-        Note note(metadata[i]);
+        Note note(metadata[i].second);
         if (note.fits_specification(spec))
         {
             new_metadata.push_back(metadata[i]);
@@ -302,16 +302,9 @@ json interpret_list_specification(json metadata, vector<string> args)
     return new_metadata;
 }
 
-pair<json, bool> create_note(vector<string> args, string root, string editor)
+pair<json, bool> create_note(string filename, bfs::path category, set<string> tags, string root, string editor)
 {
-    string filename = args[0];
-    args.erase(args.begin());
     bool overwritten = false;
-
-    pair<set<string>, bfs::path> tag_category_pair = extract_tags_and_category(args);
-    set<string> tags = tag_category_pair.first;
-    bfs::path category = tag_category_pair.second;
-
     bfs::path filepath(root);
     filepath /= category.native();
     filepath /= filename;
@@ -355,11 +348,18 @@ pair<json, bool> create_note(vector<string> args, string root, string editor)
 
 void list_notes(json metadata, vector<string> args, string root)
 {
+    // Create id's
+    vector<pair<int, json>> output_metadata;
+    for (int i = 0; i < metadata.size(); i++)
+    {
+        output_metadata.push_back(make_pair(i + 1, metadata[i]));
+    }
+
     if (args.size() > 0)
     {
-        metadata = interpret_list_specification(metadata, args);
+        output_metadata = interpret_list_specification(output_metadata, args);
     }
-    print_note_metadata(metadata, root);
+    print_note_metadata(output_metadata, root);
 }
 
 void list_categories(string root)
@@ -409,25 +409,10 @@ void list_tags(json notes)
          << output.substr(0, output.rfind(',')) << "]" << endl;
 }
 
-pair<json, bool> edit_note(json note_data, std::vector<std::string> args, string root, string editor)
+pair<json, bool> edit_note(json note_data, pair<bool, set<string>> tag_pair, pair<bool, bfs::path> category_pair, string root, string editor)
 {
     // Check if user provided either '-t' or '-c' as an argument
-    bool change_tags = false, change_category = false, overwritten = false;
-    for (string s : args)
-    {
-        if (s.compare("-t") == 0)
-        {
-            change_tags = true;
-        }
-        else if (s.compare("-c") == 0)
-        {
-            change_category = true;
-        }
-    }
-
-    pair<set<string>, bfs::path> tag_category_pair = extract_tags_and_category(args);
-    set<string> new_tags = tag_category_pair.first;
-    bfs::path new_category = tag_category_pair.second;
+    bool overwritten = false;
 
     bfs::path filepath(root);
     filepath /= note_data["category"].get<string>();
@@ -436,10 +421,10 @@ pair<json, bool> edit_note(json note_data, std::vector<std::string> args, string
     if (bfs::exists(filepath))
     {
         // Change category
-        if (change_category)
+        if (category_pair.first)
         {
             bfs::path new_path(root);
-            new_path /= new_category;
+            new_path /= category_pair.second;
 
             // Create new category if it doesn't already exist
             bfs::create_directories(new_path);
@@ -462,8 +447,8 @@ pair<json, bool> edit_note(json note_data, std::vector<std::string> args, string
             // Move file to new category
             bfs::copy_file(filepath, new_path, bfs::copy_options::overwrite_existing);
             bfs::remove_all(filepath);
-            cout << "Note moved from " << note_data["category"].get<string>() << " to " << new_category.string() << ".\n";
-            note_data["category"] = new_category.string();
+            cout << "Note moved from " << note_data["category"].get<string>() << " to " << category_pair.second.string() << ".\n";
+            note_data["category"] = category_pair.second.string();
             filepath = new_path;
         }
 
@@ -472,9 +457,9 @@ pair<json, bool> edit_note(json note_data, std::vector<std::string> args, string
         system(command.c_str());
 
         // Apply new tags
-        if (change_tags)
+        if (tag_pair.first)
         {
-            note_data["tags"] = new_tags;
+            note_data["tags"] = tag_pair.second;
             cout << "New tags applied\n";
         }
     }
@@ -531,7 +516,7 @@ void clean_directory_structure(string root)
 /* Given a note and array of other notes in JSON format, finds note in array with
  * same path and removes from array, returning new array.
  */
-json delete_duplicate(json new_note, json metadata)
+json delete_duplicate(json new_note, json metadata, int skip_index)
 {
     bfs::path note_path;
     note_path /= new_note["category"].get<string>();
@@ -539,8 +524,12 @@ json delete_duplicate(json new_note, json metadata)
 
     if (metadata.is_array())
     {
-        for (int i = 0; i < metadata.size();i++)
+        for (int i = 0; i < metadata.size(); i++)
         {
+            if (i == skip_index)
+            {
+                continue;
+            }
             json obj = metadata[i];
             if (obj["file"].get<string>().compare(new_note["file"].get<string>()) == 0)
             {
@@ -557,4 +546,25 @@ json delete_duplicate(json new_note, json metadata)
         }
     }
     return metadata;
+}
+
+void replace_all(string &source, const string &from, const string &to)
+{
+    string newString;
+    newString.reserve(source.length()); // avoids a few memory allocations
+
+    string::size_type lastPos = 0;
+    string::size_type findPos;
+
+    while (string::npos != (findPos = source.find(from, lastPos)))
+    {
+        newString.append(source, lastPos, findPos - lastPos);
+        newString += to;
+        lastPos = findPos + from.length();
+    }
+
+    // Care for the rest after last occurrence
+    newString += source.substr(lastPos);
+
+    source.swap(newString);
 }
