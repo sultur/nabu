@@ -364,28 +364,58 @@ void list_notes(json metadata, vector<string> args, string root)
 
 void list_categories(string root)
 {
-    bfs::path nabu_root(root);
-    for (auto dir = bfs::recursive_directory_iterator(nabu_root);
+    bfs::path root_folder(root);
+    bfs::path curr_path, parent_path;
+    int curr_depth = -1, last_depth = -1, indent = 0;
+
+    // Recursively iterate through directories below root folder
+    for (auto dir = bfs::recursive_directory_iterator(root_folder);
          dir != bfs::recursive_directory_iterator();
          ++dir)
     {
         if (bfs::is_directory(dir->path()))
         {
-            // TODO make output more visually appealing
-            /*
-            major1 minor1 sub1
-                   minor2 sub1
-                          sub2 subsub
-                   minor3
-            major2
-            */
-            cout << string(dir.depth(), '.')
-                 << string(dir.depth(), ' ')
-                 << dir->path().filename().string()
-                 << bfs::path::preferred_separator
-                 << '\n';
+            curr_path = bfs::relative(dir->path(), root_folder);
+
+            curr_depth = dir.depth();
+            if (curr_depth <= last_depth)
+            {
+                cout << "\n";
+                if (!parent_path.empty() && (curr_depth > 0))
+                {
+                    bfs::path::iterator curr_it = curr_path.begin();
+                    bfs::path::iterator par_it = parent_path.begin();
+                    indent = 0;
+
+                    // Calculate length of indent
+                    while ((curr_it != curr_path.end()) && (par_it != parent_path.end()))
+                    {
+                        if (par_it->compare(*curr_it) == 0)
+                        {
+                            indent += par_it->string().size();
+                        }
+                        else
+                        {
+                            break;
+                        }
+                        curr_it++;
+                        par_it++;
+                    }
+                    // Print alignment
+                    cout << string(indent + ((curr_depth - 1) * 3), ' ');
+                }
+            }
+            if (curr_depth > 0)
+            {
+                cout << " > ";
+            }
+            cout << dir->path().filename().string();
+
+            last_depth = curr_depth;
+            parent_path = curr_path;
         }
     }
+    cout << endl;
 }
 
 void list_tags(json notes)
@@ -489,13 +519,13 @@ void delete_note(json note_data, string root)
  */
 void clean_directory_structure(string root)
 {
-    bfs::path nabu_root(root);
+    bfs::path root_folder(root);
     bool found_empty;
     vector<bfs::path> to_remove;
     do
     {
         found_empty = false;
-        for (auto dir = bfs::recursive_directory_iterator(nabu_root);
+        for (auto dir = bfs::recursive_directory_iterator(root_folder);
              dir != bfs::recursive_directory_iterator();
              ++dir)
         {
