@@ -2,15 +2,18 @@
 
 ## Installation & configuration
 
-Configure Nabu through the _config.hpp_ file.
-
-In order to compile the program:
+In order to compile and install (by default installs into *~/.local*:
 
 ```sh
 make
+make install
 ```
 
+Configure Nabu through the variables in the _config.hpp_ file.
+
 ## Usage
+
+*See also man page.*
 
 Nabu commands:
 
@@ -52,3 +55,4 @@ Nabu commands:
     ```
 -   `list-categories` (`lc`): List categories
 -   `list-tags` (`lt`): List all tags
+

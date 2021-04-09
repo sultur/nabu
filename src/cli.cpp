@@ -61,7 +61,7 @@ pair<bool, json> cli(vector<string> args, json metadata, string root)
         metadata.push_back(new_metadata);
         rewrite = true;
     }
-    else if (action.compare("read") == 0 || action.compare("r") == 0)
+    else if (action.compare("read") == 0 || action.compare("r") == 0 || action.compare("-r") == 0)
     {
         if (metadata.size() == 0)
         {
@@ -99,11 +99,11 @@ pair<bool, json> cli(vector<string> args, json metadata, string root)
         command += " " + filepath.string();
         system(command.c_str());
     }
-    else if (action.compare("list") == 0 || action.compare("l") == 0)
+    else if (action.compare("list") == 0 || action.compare("l") == 0 || action.compare("-l") == 0)
     {
         list_notes(metadata, args, root);
     }
-    else if (action.compare("edit") == 0 || action.compare("e") == 0)
+    else if (action.compare("edit") == 0 || action.compare("e") == 0 || action.compare("-e") == 0)
     {
         if (metadata.size() == 0)
         {
@@ -134,7 +134,7 @@ pair<bool, json> cli(vector<string> args, json metadata, string root)
 
         rewrite = true;
     }
-    else if (action.compare("delete") == 0 || action.compare("d") == 0)
+    else if (action.compare("delete") == 0 || action.compare("d") == 0 || action.compare("-d") == 0)
     {
         if (metadata.size() == 0)
         {
@@ -153,11 +153,11 @@ pair<bool, json> cli(vector<string> args, json metadata, string root)
         delete_note(note, root);
         rewrite = true;
     }
-    else if (action.compare("list-categories") == 0 || action.compare("lc") == 0)
+    else if (action.compare("list-categories") == 0 || action.compare("lc") == 0 || action.compare("-lc") == 0)
     {
         list_categories(root);
     }
-    else if (action.compare("list-tags") == 0 || action.compare("lt") == 0)
+    else if (action.compare("list-tags") == 0 || action.compare("lt") == 0 || action.compare("-lt") == 0)
     {
         list_tags(metadata);
     }
