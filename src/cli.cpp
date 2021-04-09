@@ -29,7 +29,7 @@ pair<bool, json> cli(vector<string> args, json metadata, string root)
     string action = args[0];
     args.erase(args.begin());
 
-    if (action.compare("new") == 0 || action.compare("n") == 0)
+    if (action.compare("new") == 0 || action.compare("n") == 0 || action.compare("-n") == 0)
     {
         if (args.size() < 1)
         {
